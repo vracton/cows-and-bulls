@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cows and Bulls</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #121213;
+            color: #d7dadc;
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            text-align: center;
+            max-width: 400px;
+            padding: 20px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(4, 50px);
+            gap: 5px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .cell {
+            width: 50px;
+            height: 50px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border: 2px solid #3a3a3c;
+            font-size: 1.5em;
+            color: #d7dadc;
+            background-color: #121213;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 16px;
+        }
+
+        .cell.correct {
+            background-color: #538d4e;
+            border: 2px solid #538d4e;
+        }
+
+        .cell.present {
+            background-color: #b59f3b;
+            border: 2px solid #b59f3b;
+        }
+
+        .cell.wrong {
+            background-color: #3a3a3c;
+            border: 2px solid #3a3a3c;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #538d4e;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #3a6b3a;
+        }
+
+        .output {
+            margin-top: 20px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.5);
+            border-radius: 16px;
+        }
+
+        .modal-content {
+            background-color: #121213;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 500px;
+            text-align: center;
+            color: #d7dadc;
+            border-radius: 16px;
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: white;
+            text-decoration: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="modal" id="gameModal">
+        <div class="modal-content">
+            <span class="close" id="closeModal">&times;</span>
+            <h2>Cows and Bulls</h2>
+            <p>Guess the 4-digit number. Each digit is unique.</p>
+            <p><span style="color:#b59f3b">Cows</span>: Correct digit in the wrong position.</p>
+            <p><span style="color:#3a6b3a;">Bulls</span>: Correct digit in the correct position.</p>
+            <button id="startGame">Start Game</button>
+        </div>
+    </div>
+
+    <div class="modal" id="winModal">
+        <div class="modal-content">
+            <span class="close" id="closeWinModal">&times;</span>
+            <h2>Congratulations!</h2>
+            <p>You guessed the number!</p>
+            <button id="playAgain">Play Again</button>
+        </div>
+    </div>
+
+    <div class="modal" id="loseModal">
+        <div class="modal-content">
+            <span class="close" id="closeLoseModal">&times;</span>
+            <h2>Game Over</h2>
+            <p>The number was <span id="secretNumberDisplay"></span>.</p>
+            <button id="tryAgain">Try Again</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div id="grid" class="grid"></div>
+        <button onclick="checkGuess()">Submit</button>
+    </div>
+
+    <script>
+        function generateNumber() {
+            let digits = [];
+            while (digits.length < 4) {
+            let randomDigit = Math.floor(Math.random() * 10);
+            if (!digits.includes(randomDigit)) {
+                digits.push(randomDigit);
+            }
+            }
+            return digits.join("");
+        }
+
+        let secretNumber = generateNumber();
+        console.log("Secret Number:", secretNumber);
+
+        const grid = document.getElementById("grid");
+        const maxAttempts = 6;
+
+        for (let i = 0; i < maxAttempts * 4; i++) {
+            const cell = document.createElement("div");
+            cell.classList.add("cell");
+            cell.setAttribute("contenteditable", "false");
+            cell.setAttribute("maxlength", "1");
+            cell.addEventListener("input", handleInput);
+            cell.addEventListener("keydown", handleKeyDown);
+            grid.appendChild(cell);
+        }
+
+        let currentRow = 0;
+        enableCurrentRow();
+
+        function handleInput(event) {
+            const cell = event.target;
+            if (cell.textContent.length > 1) {
+            cell.textContent = cell.textContent[0];
+            }
+            const nextCell = cell.nextElementSibling;
+            if (nextCell && nextCell.classList.contains("cell")) {
+            nextCell.focus();
+            }
+        }
+
+        function handleKeyDown(event) {
+            const cell = event.target;
+            if (event.key === "Enter") {
+                checkGuess();
+            } else if (event.key === "ArrowRight") {
+                const nextCell = cell.nextElementSibling;
+                if (nextCell && nextCell.classList.contains("cell")) {
+                    nextCell.focus();
+                }
+            } else if (event.key === "ArrowLeft") {
+                const prevCell = cell.previousElementSibling;
+                if (prevCell && prevCell.classList.contains("cell")) {
+                    prevCell.focus();
+                }
+            } else if (event.key === "Backspace") {
+                cell.textContent = "";
+                const prevCell = cell.previousElementSibling;
+            }
+        }
+
+        function checkGuess() {
+            const rowStart = currentRow * 4;
+            const cells = Array.from(grid.children).slice(rowStart, rowStart + 4);
+            const guess = cells.map(cell => cell.textContent).join("");
+
+            if (guess.length !== 4 || isNaN(guess)) {
+                alert("Please enter a valid 4-digit number!");
+                return;
+            }
+
+            let cows = 0;
+            let bulls = 0;
+
+            for (let i = 0; i < 4; i++) {
+                if (guess[i] === secretNumber[i]) {
+                    bulls++;
+                    cells[i].classList.add("correct");
+                } else if (secretNumber.includes(guess[i])) {
+                    cows++;
+                    cells[i].classList.add("present");
+                } else {
+                    cells[i].classList.add("wrong");
+                }
+            }
+
+            currentRow++;
+            enableCurrentRow();
+
+            if (bulls === 4) {
+            showModal("winModal");
+            disableGrid();
+            } else if (currentRow === maxAttempts) {
+            document.getElementById("secretNumberDisplay").textContent = secretNumber;
+            showModal("loseModal");
+            disableGrid();
+            }
+        }
+
+        function enableCurrentRow() {
+            const rowStart = currentRow * 4;
+            const cells = Array.from(grid.children).slice(rowStart, rowStart + 4);
+            cells.forEach(cell => cell.setAttribute("contenteditable", "true"));
+        }
+
+        function disableGrid() {
+            Array.from(grid.children).forEach(cell => {
+            cell.setAttribute("contenteditable", "false");
+            });
+        }
+
+        function showModal(modalId) {
+            const modal = document.getElementById(modalId);
+            modal.style.display = "block";
+        }
+
+        function hideModal(modalId) {
+            const modal = document.getElementById(modalId);
+            modal.style.display = "none";
+        }
+
+        const gameModal = document.getElementById("gameModal");
+        const closeModal = document.getElementById("closeModal");
+        const startGame = document.getElementById("startGame");
+
+        const winModal = document.getElementById("winModal");
+        const closeWinModal = document.getElementById("closeWinModal");
+        const playAgain = document.getElementById("playAgain");
+
+        const loseModal = document.getElementById("loseModal");
+        const closeLoseModal = document.getElementById("closeLoseModal");
+        const tryAgain = document.getElementById("tryAgain");
+
+        window.onload = function() {
+            gameModal.style.display = "block";
+        }
+
+        closeModal.onclick = function() {
+            gameModal.style.display = "none";
+        }
+
+        startGame.onclick = function() {
+            gameModal.style.display = "none";
+        }
+
+        closeWinModal.onclick = function() {
+            winModal.style.display = "none";
+        }
+
+        playAgain.onclick = function() {
+            winModal.style.display = "none";
+            resetGame();
+        }
+
+        closeLoseModal.onclick = function() {
+            loseModal.style.display = "none";
+        }
+
+        tryAgain.onclick = function() {
+            loseModal.style.display = "none";
+            resetGame();
+        }
+
+        window.onclick = function(event) {
+            if (event.target == gameModal) {
+            gameModal.style.display = "none";
+            } else if (event.target == winModal) {
+            winModal.style.display = "none";
+            } else if (event.target == loseModal) {
+            loseModal.style.display = "none";
+            }
+        }
+
+        function resetGame() {
+            secretNumber = generateNumber();
+            console.log("New Secret Number:", secretNumber);
+            currentRow = 0;
+            Array.from(grid.children).forEach(cell => {
+            cell.textContent = "";
+            cell.classList.remove("correct", "present");
+            cell.setAttribute("contenteditable", "false");
+            });
+            enableCurrentRow();
+        }
+    </script>
+</body>
+</html>
