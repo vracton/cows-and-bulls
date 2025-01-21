@@ -166,7 +166,6 @@
         }
 
         let secretNumber = generateNumber();
-        console.log("Secret Number:", secretNumber);
 
         const grid = document.getElementById("grid");
         const maxAttempts = 6;
@@ -329,7 +328,6 @@
 
         function resetGame() {
             secretNumber = generateNumber();
-            console.log("New Secret Number:", secretNumber);
             currentRow = 0;
             Array.from(grid.children).forEach(cell => {
             cell.textContent = "";
